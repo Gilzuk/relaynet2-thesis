@@ -3,7 +3,13 @@
 The M.Sc. thesis *Deep Learning Architectures for Two-Hop Relay Communication*,
 laid out as an Overleaf project: `main.tex` at the root, the chapters it
 includes, the figures those chapters use, `chapters/references.bib`, the bundled
-fonts and `hebcal.sty`.
+fonts, and any local style files `main.tex` actually loads.
+
+`thesis.pdf` is the compiled document as of the source commit named in the
+publish commit message, shipped so this repository can be read without
+compiling it. It is build output, not a source: it is called `thesis.pdf`
+rather than `main.pdf` because Overleaf writes its own `main.pdf` when it
+compiles, and a source file of that name would collide with it.
 
 ## Do not edit this tree
 
