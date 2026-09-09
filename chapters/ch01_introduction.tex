@@ -1,78 +1,88 @@
 \chapter{Introduction}\label{sec:introduction}
 
-Relay communication is a key technique in contemporary wireless systems that uses intermediate nodes between a source and a destination to extend coverage, enhance reliability, and increase throughput. Classical relay strategies such as amplify-and-forward (\texttt{AF}) and decode-and-forward (\texttt{DF}) have been extensively analyzed and are widely used as baseline protocols; in several canonical relay-channel models, block-based \texttt{DF} is capacity-achieving or capacity-approaching under asymptotically long codewords \cite{CoverGamal1979RelayChannel,ElGamalKim2011NetworkIT,Laneman2004CooperativeDiversity,RankovWittneben2007HalfDuplexRelay,Nosratinia2004CooperativeCommunication}. As clarified in Remark~\ref{rem:df-terminology}, these results concern coded block operation and do not directly characterize the uncoded, symbol-wise setting studied in this thesis.
+Relay communication is a fundamental technique in contemporary wireless systems, in which an intermediate node assists communication between a source and a destination. Relays can extend coverage, improve reliability, and increase throughput when a direct link is weak or unavailable. Classical relay strategies such as amplify-and-forward (\texttt{AF}) and decode-and-forward (\texttt{DF}) have therefore been studied extensively and remain standard reference methods. In several canonical relay-channel models, coded block-based \texttt{DF} is capacity-achieving or capacity-approaching under asymptotically long codewords \cite{CoverGamal1979RelayChannel,ElGamalKim2011NetworkIT,Laneman2004CooperativeDiversity,RankovWittneben2007HalfDuplexRelay,Nosratinia2004CooperativeCommunication}. As clarified in Remark~\ref{rem:df-terminology}, those results concern coded block operation and do not directly characterize the uncoded, symbol-wise relay setting studied in the canonical experiments of this thesis.
 
-Recent advances in machine learning have motivated the application of neural networks to physical-layer communication problems, including detection, decoding, and end-to-end system optimization. Neural models can approximate nonlinear mappings that are analytically intractable and have been reported to offer advantages in low-SNR or non-ideal regimes.
+Recent advances in machine learning have motivated the use of neural networks for physical-layer communication tasks including detection, decoding, channel estimation, and end-to-end system optimization. Their attraction is particularly clear when the mapping from received observations to transmitted symbols is nonlinear, high-dimensional, or difficult to express analytically. A learned receiver can approximate such a mapping directly from data rather than constructing it explicitly from a prescribed channel model.
 
-This motivates the central question of this thesis: \emph{under what conditions can neural network--based relays improve upon or complement classical relay strategies in two-hop relay communication?}
+This flexibility, however, does not by itself imply an advantage over classical model-based processing. When the channel model and its parameters are known and the corresponding optimal decision rule is computationally tractable, a learned approximation has little reason to outperform that rule. Conversely, when the channel must first be estimated, when the relevant decision depends on a long observation sequence, or when the assumed channel family is unavailable or mismatched, the conditions required to construct the classical rule may themselves become limiting.
 
-This thesis answers that question within a unified simulation framework in which, for the canonical comparison, the relay function is the only variable. Nine relay methods are implemented (Section~\ref{sec:relay-strategies}), of which eight are evaluated in the canonical comparison (Section~\ref{sec:siso-bpsk-performance-baseline-relay-comparison}): two classical relay strategies (\texttt{AF} and \texttt{DF}) and six neural relays spanning supervised learning (\texttt{MLP}, SNR-adaptive \texttt{Hybrid} relay), generative modeling (variational autoencoder \texttt{VAE}), and sequence-based architectures (\texttt{Transformer}, \texttt{Mamba-S6}, and \texttt{Mamba-2 SSD} with structured state-space duality); a conditional GAN (\texttt{cGAN} with \texttt{WGAN-GP}) is implemented but excluded from the canonical comparison on cost grounds.
+This distinction is difficult to expose in comparisons that vary several factors simultaneously. A change in channel model may be accompanied by a change in neural architecture, parameter count, available channel information, modulation, or computational budget. An observed difference in bit-error rate (\texttt{BER}) can then reflect several effects at once: the quality of the decision rule, the information available to construct it, the function class required to realize it, or the computational cost of doing so. A useful comparison between learned and classical relaying must therefore distinguish these effects rather than treating every performance difference as evidence for or against learning.
 
-The objective is not to propose a new relay design but to answer the question above with a boundary rather than a verdict: to say where learning helps, where it does not, and why. The question divides in two, and Chapter~\ref{sec:research-objectives} poses it that way. Asked without a budget, it is a question about accuracy and about what each detector must know, and its boundary is \emph{identifiability}. Asked under a latency and computational budget, it becomes a question about what can be afforded, and its boundary is \emph{arithmetic}. The two do not fall in the same place, and the distance between them is one of this thesis's results: Section~\ref{sec:joint-latency-memory} measures a channel with memory under a latency constraint --- the one setting in which a trellis search that grows as $M^{L}$ and a relay that must buffer a whole codeword are both in play ---, and determines there which of the two constraints actually binds. Existing studies typically vary several things at once, a set of architectures and a set of channel models together, which makes it difficult to attribute a difference in error rate to model structure, to parameter count, or to the channel.
+This motivates the central question of this thesis:
 
-\paragraph{Method: one assumption at a time.} This thesis answers the question with a monotone sequence of four layers, each relaxing a further assumption about the channel; the learned relay and the metric are held fixed throughout, while the classical baseline is strengthened at each layer to remain the toughest available opponent, and the channel, modulation, and evaluation budget are adapted as needed. Read in order, their outcomes \emph{are} the answer to the central question; each is established in the chapter that runs the layer, and none is anticipated here.
+\begin{quote}
+\emph{Under what conditions can neural network--based relays improve upon or complement classical relay strategies in two-hop relay communication?}
+\end{quote}
 
-At \textbf{layer~1} the channel is memoryless and perfectly known, which is the canonical setup of Chapter~\ref{sec:experiments}; this layer asks whether learning can improve on a classical rule that is already the MAP symbol decision for that channel. \textbf{Layer~2} (Chapter~\ref{sec:unknown-channels}) adds channel memory while holding channel knowledge fixed, so that what is isolated is the \emph{function class} a relay must realize, together with the cost of realizing it, with a QPSK re-check of the same question in Section~\ref{sec:qpsk-unknown-channel}. \textbf{Layer~3} degrades the channel estimate to a finite pilot budget and sweeps it, which turns the classical receiver's advantage into a quantity with a price rather than a property. \textbf{Layer~4} removes knowledge of the channel family altogether, redrawing the channel for every block, and sets the learned relay against the classical methods that are genuinely posterior-free.
+The objective is not to identify a universally superior relay architecture. Instead, the thesis seeks a \emph{boundary}: to determine where learning provides no meaningful advantage, where it becomes useful, and what changes between those regimes.
 
-The shape of that sequence is the contribution. What is put under pressure from layer to layer is not the classical algorithms, which remain optimal for whatever channel they are handed, but their \emph{preconditions} --- so the question each layer asks is not which detector is better but whose requirements are still met. Hypotheses H1--H4 are settled at layer~1, and H5 at layers~2--4.
+\section{Two Boundaries of Learned Relaying}\label{sec:introduction-boundaries}
 
-\paragraph{Scope of this thesis.}
-This thesis studies one communication problem, held unchanged throughout, the classical
-source--relay--destination (two-hop) link, under \emph{one canonical setup}:
-SISO on both hops, i.i.d.\ Rayleigh fading, complex baseband, QPSK, uncoded
-BER. The only axis varied is the \emph{relay
-function}. BPSK is never transmitted on the canonical channel; it is the
-transmitted alphabet only in the unknown-channel experiments of
-Chapter~\ref{sec:unknown-channels}, where the one-dimensional alphabet keeps the
-trellis small enough for an exact Viterbi benchmark, and it otherwise appears
-only in the closed-form expressions those chapters quote. Two dedicated departures from it are included: a supplementary coded study (Section~\ref{sec:coded-block-df}) that measures a block-DF relay, soft-information forwarding, and an adaptive modulation-and-coding scheme against this baseline, and the unknown-channel contribution (Chapter~\ref{sec:unknown-channels}). Other departures from the canonical setup are identified as future work in Chapter~\ref{sec:discussion-and-conclusions}:
+The thesis organizes this boundary along two dimensions: \emph{identifiability} and \emph{arithmetic}.
 
-\begin{longtable}{@{}p{0.25\textwidth}p{0.71\textwidth}@{}}
-\caption[Scope of the thesis]{Scope of the thesis: the canonical setup (QPSK on Rayleigh), its supplementary coded-study departure, and the unknown-channel contribution. No other topology, relay protocol, or performance metric is evaluated in the main line of this work; all such variations are deferred to future work}
-\label{tbl:scope}\\
+The first boundary is \textbf{identifiability}: whether the receiver has sufficient information to construct the appropriate model-based decision rule. A classical detector may be optimal for a specified channel, but that optimality presupposes that the relevant channel model and parameters are available with sufficient accuracy. When those quantities must be inferred from finite observations, or when the channel family itself is not supplied, the practical comparison is no longer between a learned rule and an oracle classical rule. It is between methods operating with the information that is actually available.
 
-\toprule
-\textbf{Axis} & \textbf{Canonical value (future work in parentheses)} \\
-\midrule
-\endfirsthead
+The second boundary is \textbf{arithmetic}: whether an available model-based rule can be realized within the computational and latency budget of the system. Even when the channel is identifiable, the corresponding classical solution may require sequence search, channel estimation, block buffering, or other processing whose cost grows with the structure of the problem. In that regime, statistical optimality and operational feasibility are distinct questions.
 
-\multicolumn{2}{@{}l}{\textit{Table \thetable\ continued from previous page}}\\
-\toprule
-\textbf{Axis} & \textbf{Canonical (core) / Extensions (deferred)} \\
-\midrule
-\endhead
+These two boundaries need not coincide. A classical detector can be statistically well defined but computationally expensive; in another regime, computation may be modest while the information required to construct the detector is unavailable. The thesis therefore separates two questions:
 
-\bottomrule
-\endlastfoot
+\begin{enumerate}
+    \item \textbf{Information:} what happens as the channel information available to model-based classical processing is progressively reduced?
+    \item \textbf{Resources:} when the corresponding classical solution exists, what happens when its computational or latency cost becomes significant?
+\end{enumerate}
 
-Topology
-&
-SISO on both hops \emph{(future work: MIMO second hop)} \\
+The resulting answer is therefore a regime map rather than a ranking of relay architectures.
 
-Channel
-&
-i.i.d.\ Rayleigh fast fading (canonical), applied identically on both hops; AWGN solely as the noise term of the canonical model, the simulator being calibrated instead against the closed-form two-hop DF composition on the canonical channel itself (Table~\ref{tbl:table2}); unknown, mismatched, and time-varying channels are studied in the dedicated contribution (Chapter~\ref{sec:unknown-channels}) \emph{(future work: Rician and other channel families)} \\
+\section{Experimental Logic: Progressively Relaxing Classical Preconditions}
+\label{sec:introduction-layers}
 
-Relay Function \emph{(the studied axis)}
-&
-\emph{Classical:} AF, DF.
-\emph{Learned:} MLP, Hybrid, VAE, Transformer, Mamba-S6, Mamba-2 SSD; cGAN is implemented but excluded from the canonical comparison on cost grounds \\
+The principal experimental argument is organized as a sequence of four information regimes. The sequence begins where the preconditions of classical model-based processing are fully satisfied and progressively places those preconditions under pressure.
 
-Modulation
-&
-QPSK is paired with the canonical Rayleigh channel throughout (Chapter~\ref{sec:experiments}) and re-checked under the unknown-ISI channel of Chapter~\ref{sec:unknown-channels}, whose relay comparisons otherwise use BPSK; 16-QAM additionally appears, not as a relay-architecture question, as a rung of the coded modulation-and-coding study (Section~\ref{sec:coded-block-df}) \emph{(future work: 16-QAM and denser as a relay-architecture question, 16-PSK, and beyond)} \\
+The sequence is monotone in the \emph{information available to the receiver}, rather than in every simulator parameter. The underlying source--relay--destination problem remains the organizing communication system, but the channel model, modulation, estimator, evaluation budget, and strongest applicable classical baseline are adapted where required by the question posed at each layer. The purpose is therefore not to weaken the classical algorithms themselves. At each layer, the learned relay is compared with the strongest applicable classical baseline evaluated in this thesis; what changes is the extent to which the information and computation required by that baseline remain available.
 
-Performance Metric
-&
-Uncoded BER vs.\ SNR, Monte-Carlo averaged \\
+\paragraph{Layer 1: matched, memoryless channel.}
+Layer~1 asks whether learning helps when the assumptions required by the classical detector are fully satisfied. This is the canonical comparison of Chapter~\ref{sec:experiments}: the channel is memoryless and perfectly known, and the classical symbol decision already implements the appropriate model-based rule for that setting. Layer~1 therefore serves as the control experiment. If a learned relay cannot improve on the classical rule in this regime, that negative result is informative: later gains cannot be attributed simply to the use of a neural architecture.
 
-\end{longtable}
+\paragraph{Layer 2: channel memory with retained channel knowledge.}
+Layer~2, developed in Chapter~\ref{sec:unknown-channels}, introduces channel memory while retaining channel knowledge. The decision problem is no longer purely symbol-wise, and the relevant classical benchmark becomes sequence-based. This layer therefore isolates the effect of the \emph{function class} required to process a channel with memory together with the computational cost of realizing that function. The principal relay comparisons use BPSK to keep an exact trellis-based benchmark tractable, with a QPSK re-check in Section~\ref{sec:qpsk-unknown-channel}.
 
-Of the classical relay protocols surveyed in the literature review, only those evaluated in this thesis are part of the studied system alongside the neural relays above: amplify-and-forward and symbol-wise decode-and-forward on the canonical comparison, the coded study's block-DF exception (Section~\ref{sec:coded-block-df}), and the differential detection, pilot-aided Viterbi MLSE, and blind equalization baselines of the unknown-channel study (Chapter~\ref{sec:unknown-channels}). Material outside that configuration, such as the general relay channel with a direct link, is background only.
+\paragraph{Layer 3: finite channel estimation.}
+Layer~3 retains the structured channel model but removes perfect parameter knowledge. The channel must instead be inferred from a finite pilot budget, which is swept experimentally. Channel knowledge is therefore converted from a free assumption into an acquired resource with a measurable cost and estimation error. This layer asks when degradation in the information supplied to the classical receiver changes the comparison with the learned relay.
+
+\paragraph{Layer 4: no supplied channel-family posterior.}
+Layer~4 removes the channel-family information required to construct the corresponding model-based posterior for each block. The channel is redrawn according to the experiment, and the learned relay is compared with classical methods that operate without that posterior. This layer therefore tests the regime in which the limitation is no longer merely parameter estimation but the absence of the model information required by the matched detector itself.
+
+Taken together, the four layers trace a progression from a regime in which the informational preconditions of classical processing are fully satisfied to regimes in which those preconditions become progressively more difficult, costly, or unavailable. This progression establishes the \emph{identifiability} side of the thesis argument.
+
+Computational complexity and latency form a second, orthogonal constraint. They become particularly important once channel memory turns detection into a sequence problem and once block processing introduces buffering delay. The thesis therefore evaluates computational and latency costs alongside the relevant experiments rather than treating resource constraints as an additional stage of the channel-knowledge hierarchy. In particular, Section~\ref{sec:joint-latency-memory} examines the setting in which a trellis search whose cost grows with sequence structure and a relay that must buffer a complete codeword are simultaneously present, allowing the statistical and operational boundaries to be distinguished.
+
+\section{Contribution Structure}\label{sec:system-model-intro}
+
+The experimental program has three distinct roles: a controlled canonical benchmark, a principal unknown-channel contribution, and a supplementary coded study. They are not intended as three contributions of equal weight.
+
+\paragraph{Controlled canonical benchmark.}
+The canonical study establishes the matched-model control. It compares classical and learned relay functions while holding the source, channel model, destination processing, modulation, and evaluation procedure fixed. Its purpose is to determine what learning can and cannot provide when the assumptions required by classical symbol-wise processing are fully satisfied.
+
+\paragraph{Principal contribution: unknown and mismatched channels.}
+The principal experimental contribution is Chapter~\ref{sec:unknown-channels}. It implements Layers~2--4 by introducing channel memory and then progressively reducing the channel information available to the receiver. These experiments determine where a minimal learned relay adds value relative to the strongest applicable classical baseline evaluated in each information regime, and where it does not. They provide the principal evidence for the identifiability boundary developed in this thesis.
+
+\paragraph{Supplementary coded and resource study.}
+Sections~\ref{sec:coded-block-df}--\ref{sec:coded-latency-capacity} provide a smaller supplementary study of the uncoded symbol-wise abstraction used in the canonical benchmark. This study replaces symbol-wise DF with practical finite-length coded block-DF, introduces soft-information counterparts of the classical and learned relays, and re-evaluates the comparison at equal $E_s/N_0$, equal throughput, adaptive code rate, and under a latency constraint. Its purpose is to test the robustness of the canonical interpretation under coding and resource constraints; it is not an additional layer of the channel-knowledge hierarchy.
+
+Across these studies, the framework implements two classical relay strategies, \texttt{AF} and \texttt{DF}, together with learned relays spanning feed-forward, generative, attention-based, and state-space architectures: \texttt{MLP}, SNR-adaptive \texttt{Hybrid}, \texttt{VAE}, \texttt{Transformer}, \texttt{Mamba-S6}, and \texttt{Mamba-2 SSD}. A conditional GAN (\texttt{cGAN} with \texttt{WGAN-GP}) is additionally implemented but excluded from the canonical comparison because of its computational cost. The purpose of this architectural range is not to identify a single winning neural model, but to determine whether conclusions about learned relaying persist across substantially different learned function classes.
+
+\section{Canonical Benchmark and Scope}\label{sec:introduction-scope}
+
+The controlled benchmark underlying the main comparison is a half-duplex two-hop source--relay--destination link with one relay and no direct source--destination path. Both hops are SISO and undergo independent i.i.d.\ Rayleigh \emph{fast} fading in complex baseband. The transmitted modulation is Gray-coded QPSK, and performance is measured using uncoded BER versus SNR.
+
+Within this canonical benchmark, the source, channel model, modulation, destination processing, and evaluation procedure are fixed. Only the relay processing function $f_\theta(\cdot)$ is varied. The fading \emph{model} is therefore identical across relay strategies, but its realizations are not static: $h_1[i]$ and $h_2[i]$ are independently redrawn for every symbol. Nothing in the canonical benchmark is a static or quasi-static link.
+
+The simulator is independently validated against the corresponding analytical two-hop symbol-wise DF result on the canonical channel; the detailed calibration procedure and numerical agreement are reported with the experimental methodology rather than used as part of the contribution claim here.
+
+Figure~\ref{fig:canonical-relay-benchmark} summarizes the controlled benchmark.
 
 \begin{figure}[htbp]
-\noindent
-\makebox[\textwidth][l]{%
+\centering
 \begin{tikzpicture}[
     >=latex,
     node distance=2.8cm,
@@ -98,24 +108,103 @@ Of the classical relay protocols surveyed in the literature review, only those e
 \draw[->,thick] (R) -- node[above,align=center]
    {Hop 2\\$h_2[i],\,n_2[i]$} (D);
 
-% Note tied to the relay (the only varied block), no arrow into the datapath
 \node[below=0.9cm of R, align=center, font=\footnotesize] (note)
    {$f_\theta(\cdot)\in\{$ AF, DF, MLP, Hybrid, VAE,\\
     Transformer, Mamba-S6, Mamba-2 SSD $\}$\\[2pt]
-    \emph{(the only varied block; cGAN implemented but excluded here on cost grounds)}};
+    \emph{(the only varied block in the canonical comparison)}};
 
-% thin dotted tie-line, clearly cosmetic, not a signal arrow
 \draw[dotted] (R.south) -- (note.north);
 
-\end{tikzpicture}%
-}
-\caption[Canonical two-hop relay benchmark]{Canonical two-hop relay benchmark used throughout the thesis. The source, the channel model on both hops, and the destination are the same in every experiment of the canonical comparison; only the relay processing function $f_\theta(\cdot)$ (dashed) is varied among the eight candidate strategies compared there. The fading itself is not static: $h_1[i]$ and $h_2[i]$ are redrawn every symbol. Observed BER differences in the canonical comparison are therefore attributable to the relay strategy alone}
+\end{tikzpicture}
+\caption[Canonical two-hop relay benchmark]
+{Canonical two-hop relay benchmark. The source, channel model on both hops, modulation, and destination processing are fixed across the canonical comparison; only the relay processing function $f_\theta(\cdot)$ is varied. The fading is fast rather than static: $h_1[i]$ and $h_2[i]$ are independently redrawn for every symbol.}
 \label{fig:canonical-relay-benchmark}
 \end{figure}
 
-\section{Scope and Contributions}\label{sec:system-model-intro}
+Two dedicated departures from this benchmark serve specific research purposes. First, the supplementary coded study introduces finite-length coding, soft information, adaptive modulation and coding, throughput normalization, and latency constraints. Second, the principal unknown-channel study introduces channel memory and progressively reduces the channel information available to the receiver. BPSK is used in the principal unknown-channel relay comparisons where the one-dimensional alphabet keeps an exact trellis benchmark computationally tractable; QPSK is used as a re-check of the relevant conclusion. QPSK remains the transmitted alphabet of the canonical Rayleigh benchmark, while 16-QAM appears only as a rung of the supplementary coded modulation-and-coding study.
 
-\paragraph{System model studied in this thesis.}
-Throughout this work, a single canonical setup underlies the main line of argument: a half-duplex two-hop link, one relay, \emph{no} direct source--destination path, SISO i.i.d.\ Rayleigh \emph{fast} fading on both hops, complex baseband, Gray-coded QPSK, uncoded BER. Section~\ref{sec:system-model-1} states it in full, once, and is the reference for every detail omitted here. The learned component of the system is confined to the \emph{relay processing function} $f_\theta(\cdot)$, the block for which AF and DF are the classical alternatives; the source, the channel model, and the destination demodulator are held fixed in the canonical comparison, so observed BER differences there are attributable to the relay strategy alone; the coded and unknown-channel studies below deliberately vary the coding, channel, or destination processing as well. The simulator is calibrated on the canonical channel itself: symbol-wise DF's measured BER matches the closed-form two-hop composition closely, within $3.6\%$ relative error at every tabulated SNR (Table~\ref{tbl:table2}; the largest gap is at $12$~dB), once the QPSK constellation's $E_s/N_0$-to-$E_b/N_0$ conversion is applied. Beyond the canonical core the thesis makes two further contributions, of unequal weight, and this section states only what they are; their findings belong to the chapters that establish them. A smaller supplementary study (Sections~\ref{sec:coded-block-df}--\ref{sec:coded-latency-capacity}) replaces the uncoded symbol-wise DF baseline with a practical finite-length coded block-DF relay, adds soft-decision counterparts of both the classical and the learned relay, and re-derives the comparison first at equal $E_s/N_0$, then at equal throughput, then under an adaptive code rate and a latency deadline. The principal experimental contribution (Chapter~\ref{sec:unknown-channels}) studies learned relaying under \emph{unknown and mismatched} channels that deliberately violate the canonical memoryless assumptions, and maps where a minimal learned relay adds value over the strongest classical baseline evaluated, and where it does not (H5). All other departures --- other channel families, a MIMO second hop, learned constellations --- are identified as future work in Chapter~\ref{sec:discussion-and-conclusions}. Capacity-theoretic results and the cooperative-diversity order are quoted in Chapter~\ref{sec:literature-review} as classical \emph{background only}; they are not the operating point evaluated here.
+Table~\ref{tbl:scope} summarizes the resulting scope.
 
-Figure~\ref{fig:canonical-relay-benchmark} summarizes this benchmark. The ``identical'' components named there are identical as \emph{models}, not as particular channel realizations: the fading is \emph{fast}, so $h_1[i]$ and $h_2[i]$ are redrawn independently for every symbol. Nothing in this thesis is a static or quasi-static link.
+\begin{longtable}{@{}p{0.22\textwidth}p{0.35\textwidth}p{0.37\textwidth}@{}}
+\caption[Scope of the thesis]
+{Scope of the thesis, distinguishing the controlled canonical benchmark from the dedicated experimental departures.}
+\label{tbl:scope}\\
+
+\toprule
+\textbf{Axis} &
+\textbf{Canonical benchmark} &
+\textbf{Dedicated departure} \\
+\midrule
+\endfirsthead
+
+\multicolumn{3}{@{}l}{\textit{Table \thetable\ continued from previous page}}\\
+\toprule
+\textbf{Axis} &
+\textbf{Canonical benchmark} &
+\textbf{Dedicated departure} \\
+\midrule
+\endhead
+
+\bottomrule
+\endlastfoot
+
+Topology
+&
+Half-duplex two-hop SISO; one relay; no direct source--destination path
+&
+Canonical topology retained in the principal experimental line
+\\
+
+Channel
+&
+i.i.d.\ Rayleigh fast fading on both hops
+&
+Channels with memory, finite estimation, and unknown/mismatched channel information in Chapter~\ref{sec:unknown-channels}
+\\
+
+Modulation
+&
+Gray-coded QPSK
+&
+BPSK and QPSK in the unknown-channel study; 16-QAM only in the supplementary coded modulation-and-coding study
+\\
+
+Relay processing
+&
+AF, symbol-wise DF, MLP, Hybrid, VAE, Transformer, Mamba-S6, and Mamba-2 SSD
+&
+Study-specific strongest applicable classical baselines; cGAN implemented but excluded from the canonical comparison on cost grounds
+\\
+
+Coding
+&
+Uncoded
+&
+Finite-length coded block-DF, soft-information forwarding, and adaptive coding in the supplementary coded study
+\\
+
+Primary metric
+&
+BER versus SNR, Monte-Carlo averaged
+&
+Throughput, computational cost, and latency additionally evaluated where required by the corresponding research question
+\\
+
+\end{longtable}
+
+Other departures from this configuration are outside the experimental scope of the thesis. These include other channel families such as Rician fading, a MIMO second hop, learned constellations, and higher-order modulation as a relay-architecture question; they are identified as future work in Chapter~\ref{sec:discussion-and-conclusions}. Capacity-theoretic relay results and cooperative-diversity results are used in Chapter~\ref{sec:literature-review} as classical background rather than as operating points evaluated experimentally.
+
+Of the broader set of classical relay and receiver methods surveyed in the literature review, only methods actually evaluated in the corresponding experiments form part of the thesis comparison. These comprise AF and symbol-wise DF in the canonical benchmark, block-DF and its soft-information variants in the supplementary coded study, and the sequence-detection, pilot-aided, differential, and blind baselines used in the unknown-channel study. Models outside the studied topology, including the general relay channel with a direct source--destination link, are background only.
+
+\section{Research Hypotheses and Thesis Logic}
+\label{sec:introduction-hypotheses}
+
+The hypotheses introduced formally in Chapter~\ref{sec:research-objectives} follow the same structure as the experimental argument. H1--H4 concern performance, architecture, and computational behavior under the matched canonical benchmark and are therefore tested primarily in Layer~1. H5 addresses the principal robustness question: whether learned relaying becomes useful as the information required by model-based classical processing is progressively reduced. It is therefore tested across Layers~2--4.
+
+This division is important. The thesis does not interpret a learned relay's performance under an unknown channel as evidence that the same relay should outperform a matched classical detector when that detector's assumptions are satisfied. Conversely, failure to outperform the matched detector in Layer~1 does not imply that learning has no role once the information required by that detector must itself be estimated or is unavailable. The layers are designed precisely to distinguish these regimes.
+
+The resulting thesis argument can therefore be summarized as follows. The canonical benchmark first establishes the regime in which classical model-based processing has its full informational advantage. Channel memory then increases the structure of the required decision rule without initially removing channel knowledge. Finite estimation subsequently places a measurable price on that knowledge, and the final information regime removes the supplied channel-family posterior altogether. Complexity and latency analyses separately determine when an available model-based solution becomes operationally expensive.
+
+The contribution of this thesis is consequently not a claim that a particular neural architecture replaces classical relaying. It is a controlled map of the conditions under which the comparison changes. The experiments distinguish gains arising from \emph{what can be known} from gains arising from \emph{what can be computed}, and thereby identify regimes in which learned relaying can complement classical processing as well as regimes in which the classical solution should remain preferred.
+
+In this sense, the central question has two boundaries rather than one winner: \emph{identifiability} determines whether the information required by the classical rule is available, while \emph{arithmetic} determines whether an available rule can be afforded. The chapters that follow establish where those boundaries lie for the two-hop relay problem studied here.
