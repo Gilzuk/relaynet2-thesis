@@ -1,134 +1,417 @@
-\chapter{Research Objectives}\label{sec:research-objectives}
+\chapter{Research Objectives and Hypotheses}
+\label{sec:research-objectives}
 
-\section{Main Objective}\label{sec:main-objective}
+\section{Research Problem}
+\label{sec:research-problem}
 
-To determine \emph{under which conditions} a learned relay surpasses classical relay processing in two-hop communication, and where it does not. A single canonical setup (SISO on both hops, i.i.d.\ Rayleigh fast fading, complex baseband, QPSK, uncoded BER) serves as the controlled baseline on which classical and AI-based strategies are compared as a function of SNR regime and computational constraints. Two deliberate departures from that baseline then locate the boundary the canonical comparison cannot reach: a coded chain, which tests whether the conclusion survives when the classical relay is allowed to decode a channel code (Section~\ref{sec:coded-block-df}), and channels whose structure lies outside the model class the classical relays assume, which is where the learned relay's value is actually established (Chapter~\ref{sec:unknown-channels}). The canonical setup is therefore the control, not the scope.
+The central question of this thesis is not whether neural relays are
+universally superior to classical relay strategies, but under what conditions
+they can improve upon or complement them. The comparison depends on more than
+bit-error rate (\texttt{BER}) alone. A classical detector may have an
+appropriate model-based decision rule but require channel information that is
+unavailable or expensive to estimate. Conversely, the required information
+may be available while the corresponding computation or decision delay becomes
+prohibitive.
 
-\subsection{Two Research Questions}\label{sec:two-objectives}
+The research problem is therefore organized around two distinct boundaries:
+\emph{identifiability} and \emph{arithmetic}. Identifiability concerns whether
+the information required to construct the appropriate model-based classical
+rule is supplied or can be estimated with sufficient reliability. Arithmetic
+concerns whether that rule, once constructible, can be executed within the
+available computational and latency budget.
 
-The main objective resolves into two questions that differ only in whether a budget is imposed, and which for that reason have different answers. Throughout, the classical reference is named explicitly rather than left as ``classical processing'': symbol-wise DF and AF where the channel is memoryless, Viterbi MLSE where it has memory, and block DF --- a channel code decoded and re-encoded at the relay --- where the relay is permitted to spend a frame of delay.
+These boundaries need not occur at the same operating point. A classical
+detector may remain statistically appropriate while becoming computationally
+expensive as channel memory or modulation order increases. In another regime,
+the computation may remain manageable while the channel information required
+to instantiate the detector cannot be estimated reliably from the available
+observations.
 
-\begin{description}
-\item[\textbf{O1 (unconstrained).}] On a channel with memory, and with no budget on latency or computation, in which regime and under what conditions can a learned relay replace the classical method? This is a question purely about accuracy and about what each detector needs to know. It is answered by the four-layer ladder of Chapter~\ref{sec:unknown-channels}, whose rungs vary exactly one thing: how much the receiver chain knows about the channel.
-
-\item[\textbf{O2 (constrained).}] The same question when the relay must also meet a latency budget and a computational budget. Here the classical method may be the more accurate detector and still be unavailable, because a trellis search that grows as $M^{L}$ eventually cannot be afforded and a relay that decodes a codeword cannot decide before the codeword ends.
-\end{description}
-
-Whether the two boundaries coincide is not settled in advance, and there is reason to expect they do not. O1's turns on \emph{identifiability} --- how well the channel must be known before the classical detector can be run as specified at all --- while O2's turns on \emph{arithmetic and delay}, which the channel's memory governs whether or not the channel is known. Two different resources may well run out at two different points. If they do, the distance between them is a result in its own right rather than a restatement of either, and this thesis is structured to measure it: Section~\ref{sec:partial-posterior} locates the first by sweeping the pilot budget until the classical estimate fails, and Section~\ref{sec:joint-latency-memory} locates the second by measuring a channel with memory under a latency constraint.
-
-Latency is singled out for measurement because it is more often assumed than measured. A sequence detector is commonly treated as latency-expensive on the grounds that it searches a trellis, and a windowed relay as cheap on the grounds that its window is short; neither follows from the structure of the algorithms, since a trellis search need not run to the end of the block and a window must be filled on both sides of the symbol it decides. Section~\ref{sec:joint-latency-memory} therefore measures the decision delay each detector actually imposes, rather than inferring it.
-
-\section{Research Gap and Motivation}\label{sec:research-gap-and-motivation}
-
-Despite growing interest in AI for wireless communication, a systematic comparison of relay processing paradigms (spanning classical signal processing, supervised learning, generative modeling, and modern sequence architectures) is, to the best of our knowledge, absent from the literature. The following specific gaps motivate this thesis:
-
-\begin{enumerate}
-    \item \textbf{Gap 1: No cross-paradigm relay comparison.} Existing work on AI-based relay processing focuses on individual architectures in isolation. Ye et al.~\cite{YeLiJuang2018OFDMDL} demonstrated DNNs for OFDM detection, Dorner et al.~\cite{Dorner2018OverTheAirDL} explored autoencoders for end-to-end communication, and Samuel et al.~\cite{SamuelDiskinWunder2019MIMODetect} applied unfolded networks to MIMO detection. However, no study systematically compares supervised feedforward networks, variational autoencoders, adversarial networks, attention-based Transformers, and state space models (Mamba \cite{gu2023mamba}, Mamba-2 SSD \cite{DaoGu2024TransformersSSM}) for the same relay denoising task under controlled conditions. State space models in particular have begun to be applied to receiver-side physical-layer tasks, such as channel state prediction \cite{Djuhera2026MambaCSP}, but not, to the best of our knowledge, to the relay processing function itself, where the node must re-transmit rather than merely decide. Without such a comparison, practitioners cannot make informed architecture selections.
-    \item \textbf{Gap 2: The complexity--performance relationship is uncharacterized for relay processing.} Network sizing is a well-studied question in machine learning generally, and model-size trade-offs have been examined for other physical-layer learning tasks --- automatic modulation classification, for instance, exhibits a parameter-count band beyond which accuracy degrades \cite{Harper2023AMCDeepNets}; what is missing is the corresponding characterization for the relay, whose denoising task is unusually low-dimensional. Recovering one symbol from a noisy observation has a small minimum description length --- the target is a soft threshold function --- so it is not obvious that capacity helps here at all, and the question of how small a relay network can be before performance degrades has not, to the best of our knowledge, been answered. Nor has an equal-parameter comparison been reported for this task, which is what separates architectural effects from capacity effects.
-
-\end{enumerate}
-
-This thesis addresses both gaps through a unified framework that implements nine relay strategies and compares eight of them on the canonical setup, with both original and normalized parameter counts, full statistical analysis, and a dedicated complexity study; Gap 1's adversarial paradigm (cGAN) is implemented but, being excluded from the canonical comparison on cost grounds, is addressed qualitatively rather than quantitatively. The following table summarizes the positioning of this work relative to the literature:
-
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
-\caption[Research positioning]{Research positioning: comparison of this thesis against prior work in deep-learning-based relay communication}\label{tbl:table17}\tabularnewline
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Aspect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Prior Work
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-This Thesis
-\end{minipage} \\
-\midrule\noalign{}
-\endfirsthead
-\toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Aspect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Prior Work
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-This Thesis
-\end{minipage} \\
-\midrule\noalign{}
-\endhead
-\bottomrule\noalign{}
-\endlastfoot
-Relay strategies compared & 1--2 (typically AF vs.~DF, or one AI method) & 8 compared (2 classical + 6 AI); a ninth, cGAN, is implemented but excluded on cost grounds \\
-AI paradigms & Single (e.g., supervised only) & 4 implemented (supervised, generative, adversarial, sequential); adversarial (cGAN) excluded from the canonical comparison on cost grounds \\
-Evaluation discipline & Single ad-hoc configuration & One canonical setup (SISO, Rayleigh, QPSK) for the eight-relay comparison, chosen in advance and never varied there, calibrated against closed-form theory on that channel; a supplementary coded study deliberately varies the code, rate, and modulation against this baseline \\
-Complexity analysis & None & Normalized $\sim$3K-parameter comparison + complexity study (does BER rise again with model size?) \\
-State space models & Applied to receiver-side tasks; none as a relay processor & Mamba-S6, Mamba-2 SSD evaluated as relay processors \\
-Statistical rigor & Often missing & Wilcoxon test, 95\% CI, 10 trials per point \\
-\end{longtable}
-
-\paragraph{Relationship between the canonical study and the extension study.} Hypotheses H1--H4 concern the canonical relay scenario introduced in Chapter~\ref{sec:introduction}: a memoryless two-hop channel with white noise and uncoded transmission. Hypothesis H5 studies a deliberately different regime in which the canonical model no longer represents the true channel. It therefore serves as a robustness extension rather than a direct continuation of the canonical experiments.
-
-\section{Research Hypotheses}\label{sec:research-hypotheses}
-
-Based on the theoretical background of Chapter \ref{sec:literature-review}, this thesis tests the following hypotheses. H1--H4 are posed and answered on the canonical setup. H5 is the central hypothesis of the thesis's principal contribution (Chapter~\ref{sec:unknown-channels}), posed on channels \emph{outside} the canonical family:
+The thesis therefore asks two related questions:
 
 \begin{enumerate}
-    \item \textbf{H1 (AI advantage over AF at low SNR).} On the canonical setup, some AI-based relay strategies achieve lower BER than AF at low SNR (0--4 dB), where the non-linear denoising learned by the neural network provides an advantage over AF's noise amplification.
+    \item Under what information conditions does learned relay processing
+    improve upon or complement the strongest applicable classical baselines
+    evaluated in this thesis?
 
-\emph{Rationale:} At low SNR, the MMSE-optimal (posterior-mean) denoiser of a BPSK symbol from a single AWGN observation, $f^*(y) = \mathbb{E}[x \mid y] = \tanh(y/\sigma^2)$, is a smooth non-linear mapping that differs substantially from AF's linear scaling; a neural network can approximate $f^*$ closely, whereas AF amplifies noise together with the signal. Note that $f^*$ is optimal in the mean-square sense for the relay's local estimate; it is not claimed to be the end-to-end BER-optimal relay function, which is why H1 is posed as an empirical hypothesis rather than a theorem.
-
-\item \textbf{H2 (DF dominance at high SNR).} The symbol-wise DF relay (Remark~\ref{rem:df-terminology}) achieves the lowest BER at medium-to-high SNR ($\geq 6$ dB), outperforming all AI methods.
-
-\emph{Rationale:} At high SNR, $f^*(y) \approx \text{sign}(y)$, which is exactly the symbol-wise DF operation. AI relays introduce a small but non-zero approximation error, so DF should be optimal among the per-symbol relay functions considered in this uncoded setting. This dominance is asserted only within the uncoded, symbol-wise family evaluated here and is not a claim of information-theoretic optimality (cf.\ Remark~\ref{rem:df-terminology}).
-
-\item \textbf{H3 (Overfitting at excess capacity).} There exists an optimal model size for relay denoising beyond which performance degrades due to overfitting, so that BER rises again once capacity exceeds what the mapping requires. Specifically, models with $\sim$100--200 parameters achieve performance comparable to models with $10$--$100\times$ more parameters. Only the second, weaker part of this hypothesis was testable with the protocol originally adopted: establishing \emph{overfitting} as the mechanism behind any upturn would require seed replication and train/test-gap measurement. The seed replication is performed for the MLP size axis by the sweep of Section~\ref{sec:minimum-relay-size}, and the hypothesis is adjudicated there and in Section~\ref{sec:complexity-curve-turn}; the train/test-gap measurement, and any replication of the \emph{cross-architecture} comparison, remain outstanding and are recorded in Section~\ref{sec:limitations}.
-
-\emph{Rationale:} The bias-variance analysis (Section \ref{sec:theoretical-basis-universal-approximation-and-denoising}) predicts that the low-complexity target function $f^*$ requires minimal model capacity. Excess capacity increases variance without reducing bias.
-
-\item \textbf{H4 (Architecture convergence at an equal parameter budget).} When all AI models are normalized to the same parameter count ($\sim$3,000), the performance differences between architectures narrow significantly, indicating that parameter count is a more important factor than architectural choice. This is an equal-\emph{budget} comparison rather than an isolation of architecture from capacity: as Table~\ref{tbl:table28} records, meeting the budget required adjusting width, depth, state dimension and input window size together, so those degrees of freedom co-vary with architecture and are not separately controlled.
-
-\emph{Rationale:} All architectures are universal approximators and the target function is simple. At equal capacity, architectural inductive biases provide diminishing returns.
-
+    \item When a model-based classical solution remains constructible, under
+    what computational or decision-delay conditions does its implementation
+    become operationally restrictive?
 \end{enumerate}
 
-Unlike H1--H4, which assume the canonical memoryless channel throughout, H5 deliberately introduces impairments not present in the system model of Chapter~\ref{sec:introduction}, including channel memory, ISI, and nonlinear distortion.
-\begin{enumerate}[start=5]
-\item \textbf{H5 (Principal contribution, unknown-channel mitigation).} On channels with structure unknown to the receiver chain, memory (intersymbol interference) or asymmetry (biased nonlinearity), the \emph{memoryless} classical relays (AF, symbol-wise DF) fail to relay reliably, exhibiting error floors or severe degradation, whereas the minimal $170$-parameter MLP relay restores reliable relaying by learning the impairment from data, approaching the performance of the optimal model-aware detector without requiring knowledge of the channel family.
+The objective is consequently not to identify a universally winning relay
+architecture. It is to determine the regimes in which the requirements of
+classical and learned processing remain satisfied.
 
-\emph{Rationale:} AF forwards the channel impairment untouched, and symbol-wise DF applies a fixed memoryless zero-threshold decision; neither can compensate structure they do not model. Classical theory does provide a remedy \emph{once the channel family is known}, estimate-then-MLSE (pilot-based channel estimation followed by Viterbi equalization) is optimal for a linear FIR channel and is included as a benchmark. The hypothesis is therefore not that learning beats classical theory, but that a single fixed learned architecture can approach model-aware performance on an \emph{unseen per-block realization drawn from the impairment family it was trained on}, without per-block CSI, pilots, explicit identification or online adaptation, and that it remains applicable on impairments (e.g.\ nonlinear bias) for which linear MLSE is mis-specified. Its arithmetic is constant per symbol for a \emph{fixed deployed architecture}; across channel memories, keeping the observation window wide enough to cover the memory generally requires widening it, so the learned cost scales roughly linearly in the selected window against MLSE's exponential growth in the full state. How far this holds, and on which impairment structures it breaks down, is determined empirically in Chapter~\ref{sec:unknown-channels}. Conversely, on channels that satisfy the classical assumptions, H2 predicts no learned relay can beat DF, so H5 also delineates the precise boundary of the learned relay's value.
-\end{enumerate}
 
-\section{Specific Objectives}\label{sec:specific-objectives}
+\section{Research Objectives}
+\label{sec:research-objectives-detail}
+
+The experimental program is organized around three objectives.
+
+\paragraph{O1: Establish the matched-model control.}
+
+Determine whether learned relay processing provides a measurable BER advantage
+when the assumptions required by classical symbol-wise processing are fully
+satisfied. The canonical benchmark therefore fixes the source, channel model,
+modulation, destination processing, and evaluation procedure while varying the
+relay processing function.
+
+This objective establishes the reference regime against which the later
+departures are interpreted.
+
+\paragraph{O2: Locate the identifiability boundary.}
+
+Determine how the comparison between learned and classical processing changes
+as the information required by model-based detection becomes progressively
+more difficult to obtain. This objective is evaluated by first introducing
+channel memory while retaining exact channel knowledge, then replacing exact
+knowledge with finite pilot-based estimation, and finally removing the
+supplied per-block information required to construct the matched posterior.
+
+The purpose is not to weaken the classical algorithms themselves. At each
+stage, the comparison uses the strongest applicable classical baseline
+evaluated under the information available in that regime.
+
+\paragraph{O3: Locate the arithmetic boundary.}
+
+Determine when an available model-based solution becomes operationally
+expensive under computational and decision-delay constraints. This objective
+compares the scaling and latency requirements of sequence-based classical
+processing, learned inference, and block-based relay processing where those
+constraints are relevant.
+
+The arithmetic objective is distinct from the identifiability objective. A
+classical rule may be constructible but expensive, or inexpensive but
+impossible to instantiate reliably because the required channel information
+is unavailable.
+
+
+\section{Experimental Regime Map}
+\label{sec:experimental-regime-map}
+
+The experiments are organized as an ordered regime map rather than a strict
+one-variable-at-a-time ablation. The sequence progressively relaxes the
+preconditions required by model-based classical processing.
+
+The underlying two-hop relay problem remains the organizing communication
+system, while the channel model, modulation, estimator, evaluation budget, and
+strongest applicable classical baseline are adapted where required by the
+question posed in each regime. The sequence should therefore be interpreted
+as a progression in the information available to the receiver rather than as
+a claim that every other simulator parameter remains unchanged.
+
+
+\paragraph{Layer 1: matched, memoryless control.}
+
+Layer~1 is the canonical matched-model control. The channel is memoryless and
+perfectly known, so the classical symbol-wise decision rule has the model
+information required by the problem.
+
+This layer asks whether learning provides an advantage when the preconditions
+of classical processing are fully satisfied. A failure of the learned relay
+to outperform the matched classical rule in this regime is therefore
+informative rather than evidence that learned relaying is generally
+ineffective. It establishes the reference point from which the later
+departures are interpreted.
+
+
+\paragraph{Layer 2: matched channel with memory.}
+
+Layer~2 introduces channel memory while retaining exact channel knowledge.
+The required classical decision therefore changes from a symbol-wise rule to
+a sequence-dependent rule.
+
+This layer primarily tests the effect of function class and computational
+structure. The channel is not unknown at this stage. Both the learned and
+classical methods are evaluated with the information required by the
+corresponding experiment, while the classical reference becomes a
+sequence-based detector appropriate to the known finite-memory channel.
+
+Layer~2 therefore separates the introduction of channel memory from the
+channel-estimation uncertainty introduced in the next layer.
+
+
+\paragraph{Layer 3: finite channel estimation.}
+
+Layer~3 retains the structured channel model but replaces exact parameter
+knowledge with estimation from a finite pilot budget. Channel knowledge is
+therefore converted from a free assumption into an acquired resource with
+measurable estimation error and overhead.
+
+An important distinction in this layer is between \emph{structural
+identifiability} and \emph{operationally reliable identification}. A channel
+may remain identifiable in principle while the available pilot budget produces
+estimates that are too uncertain to support reliable matched detection.
+
+The pilot sweep therefore measures when the information advantage of the
+model-based receiver becomes practically usable rather than assuming that
+channel knowledge is available without cost.
+
+
+\paragraph{Layer 4: no supplied per-block matched posterior.}
+
+Layer~4 removes the supplied per-block channel information required to
+construct the matched model-based posterior.
+
+The learned relay is not assumed to have no prior information about the
+impairment family. It retains information acquired offline from its training
+distribution. The evaluated blind classical methods, by contrast, must infer
+useful structure from the received block without being supplied with the
+per-block information required by the matched detector.
+
+The comparison is therefore between amortized family-level learning and
+per-block blind adaptation. This distinction is important because the learned
+relay's training distribution constitutes prior information even when no
+explicit channel estimate or matched posterior is supplied during inference.
+
+
+\section{Relationship Between Identifiability and Arithmetic}
+\label{sec:identifiability-arithmetic}
+
+The four-layer sequence primarily locates the identifiability boundary. The
+arithmetic boundary is orthogonal to that sequence.
+
+Identifiability asks whether the information required to instantiate the
+classical rule is supplied or can be estimated reliably. Arithmetic asks
+whether that rule, once constructible, can be executed within the available
+computational and decision-delay budget.
+
+The two boundaries therefore define three broad operating regimes:
 
 \begin{enumerate}
-\def\labelenumi{\arabic{enumi}.}
-\item
-  \textbf{Implement nine relay strategies and compare eight of them} spanning four learning paradigms: no learning (AF, DF), supervised learning (MLP, Hybrid), generative modeling (VAE), and sequence modeling (Transformer, Mamba-S6, Mamba-2 SSD); the ninth, a conditional GAN (cGAN), is implemented but excluded from the comparison on cost grounds.
-\item
-  \textbf{Evaluate on the canonical setup:} SISO Rayleigh fast fading with QPSK, with symbol-wise DF checked against the closed-form two-hop composition on that same channel as the analytical calibration.
-\item
-  \textbf{Investigate the complexity--performance trade-off} by testing model architectures ranging from 0 parameters (classical) to 26,179 parameters (Mamba-2 SSD), and by conducting a normalized comparison at approximately 3,000 parameters.
-\item
-  \textbf{Test whether the canonical conclusion survives a coded chain} by replacing the uncoded symbol-wise DF baseline with a genuine block-DF relay --- a convolutional code decoded and re-encoded at the relay --- and comparing it against coded-aware learned relays at equal $E_s/N_0$ and again at equal throughput, since a code that halves the information rate changes what ``better'' means (Section~\ref{sec:coded-block-df}).
-\item
-  \textbf{Delineate the conditions under which a learned relay surpasses classical processing} on channels whose structure the classical relays do not model --- unknown memory, nonlinear asymmetry, and composite cascades of both --- by locating the boundary rather than demonstrating a capability: a memoryless control where learning is expected to buy nothing, a matched-receiver bound (Viterbi MLSE with genie CSI), a pilot-budget sweep to find the crossover, and a blind regime where no channel posterior exists (Chapter~\ref{sec:unknown-channels}).
-\item
-  \textbf{Price the two objectives against each other} by measuring a channel with memory \emph{under} a latency constraint --- the one cell in which MLSE's $M^{L}$ growth and block DF's frame buffering bind simultaneously --- with every relay placed inside one identical coded chain so the comparison is between relays and nothing else, and with cost reported on axes that assume no processor: decision delay in symbols and multiply-accumulates per symbol (Section~\ref{sec:joint-latency-memory}).
-\item
-  \textbf{Identify practical deployment recommendations} for selecting the appropriate relay strategy given specific operational constraints (SNR range, computational budget, channel environment).
+    \item the classical rule is constructible and affordable;
+
+    \item the classical rule is constructible but becomes increasingly
+    expensive as the problem dimension, channel memory, modulation order, or
+    latency requirement changes;
+
+    \item the matched classical rule is not operationally constructible from
+    the information supplied at inference.
 \end{enumerate}
 
-\section{Scope and limitations}\label{sec:scope-and-delimitations}
+The thesis does not assume that learned inference has complexity independent
+of channel memory. For a fixed deployed architecture, its per-symbol inference
+cost is fixed, but the context required by that architecture may increase as
+the channel memory increases. The relevant comparison is therefore one of
+scaling. Exact sequence-search complexity grows rapidly with channel memory
+and modulation order, whereas the evaluated learned processing can exhibit
+more favorable scaling with the context required by the deployed model.
 
-The following limitations define the scope of the canonical comparison, confined throughout to the setup below (SISO, Rayleigh fast fading, complex baseband, QPSK, uncoded); the supplementary coded and unknown-channel studies depart from it deliberately, as noted where relevant:
+Computational and latency analyses are consequently evaluated alongside the
+relevant experiments rather than treated as an additional information layer.
 
-\begin{itemize}
-\tightlist
-\item
-  \textbf{Modulation:} QPSK for the canonical relay comparison; the unknown-channel study (Chapter~\ref{sec:unknown-channels}) mainly uses BPSK, with a QPSK re-check of the unknown-ISI result (Section~\ref{sec:qpsk-unknown-channel}), and 16-QAM enters only as a modulation-and-coding rung in the link-adaptation study. Higher-order constellations as a relay design question, and the joint 2D $N$-class formulation they require, are deferred to future work.
-\item
-  \textbf{Channel knowledge:} Perfect CSI in the canonical core; estimation error is not modeled there. Chapter~\ref{sec:unknown-channels} lifts this with finite-pilot estimation, a swept pilot budget, and a zero-CSI blind regime.
-    \item
-  \textbf{Topology:} A single relay, two hops, half-duplex, SISO on both hops. Multi-relay, full-duplex and multi-antenna (MIMO) configurations are deferred to future work.
-\end{itemize}
 
-These delimitations isolate the relay processing function from protocol and system effects.
+\section{Research Hypotheses}
+\label{sec:research-hypotheses}
+
+The hypotheses below translate the thesis-level research question into
+experimentally testable claims. H1--H4 concern the matched canonical control,
+while H5 addresses the principal robustness question across Layers~2--4.
+
+
+\paragraph{H1: Neural relays can improve upon AF in the low-SNR regime.}
+
+Under the canonical matched benchmark, at least some evaluated learned relay
+functions are expected to achieve lower BER than amplify-and-forward,
+particularly at low SNR where forwarding amplified noise limits AF
+performance.
+
+H1 is deliberately restricted to comparison with AF. Evidence that a learned
+relay improves upon AF does not imply that it improves upon matched
+decode-and-forward.
+
+
+\paragraph{H2: Learned relays do not reliably outperform matched symbol-wise
+DF.}
+
+Under the canonical matched, memoryless, and uncoded benchmark, no evaluated
+learned relay is expected to achieve reliably lower BER than symbol-wise DF at
+medium-to-high SNR. Learned relays may match DF within statistical uncertainty,
+but are not expected to improve upon the matched classical decision rule.
+
+H2 therefore establishes the expected control result when the information
+required by the classical rule is fully available.
+
+
+\paragraph{H3: Relay performance saturates beyond modest model capacity.}
+
+Increasing neural model capacity beyond that required to represent the
+canonical relay mapping is not expected to produce a corresponding BER
+improvement.
+
+H3 concerns performance saturation with model size. The experiments do not
+assume in advance that any degradation observed at larger model sizes must be
+caused by overfitting. Overfitting is therefore treated as a possible
+mechanism only if the experimental evidence demonstrates a reproducible
+degradation beyond statistical and initialization variation.
+
+
+\paragraph{H4: Equal parameter budgets reduce but do not necessarily
+eliminate architecture-dependent BER differences.}
+
+When learned relays are compared under approximately equal parameter budgets
+and input context, architectural differences are expected to narrow where the
+underlying relay mapping is simple, particularly at high SNR. Differences may
+remain at low SNR or when sequence structure becomes relevant.
+
+Parameter normalization controls model size but does not isolate architecture
+alone. Depth, width, state dimension, internal structure, and other
+architecture-specific quantities may still differ between model families.
+
+
+\paragraph{H5: Learned relaying becomes comparatively more useful as the
+information required by matched classical processing is reduced.}
+
+A learned relay trained across an impairment family is expected to become
+comparatively more useful as the inference chain moves from exact channel
+knowledge to finite estimation and finally to operation without the supplied
+per-block information required to construct the matched posterior.
+
+The expected advantage is not universal. Where the matched classical rule
+remains both constructible and computationally affordable, it remains the
+preferred reference. The hypothesis instead concerns the regimes in which the
+information or resource assumptions required by that rule become restrictive.
+
+For channels with memory, the comparison also depends on computational
+scaling. Exact sequence-search complexity grows rapidly with channel memory
+and modulation order, whereas learned inference may exhibit more favorable
+scaling with the context required by the deployed architecture. H5 therefore
+does not assume that learned complexity is independent of channel memory.
+
+
+\section{Hypothesis-to-Experiment Mapping}
+\label{sec:hypothesis-experiment-map}
+
+Table~\ref{tbl:hypothesis-experiment-map} maps each hypothesis to the
+experimental regime and primary evidence used to evaluate it.
+
+\begin{table}[htbp]
+\centering
+\caption{Mapping between research hypotheses, experimental regimes, and
+primary evidence.}
+\label{tbl:hypothesis-experiment-map}
+\begin{tabular}{@{}p{0.08\textwidth}p{0.19\textwidth}
+                p{0.31\textwidth}p{0.32\textwidth}@{}}
+\toprule
+\textbf{Hyp.} &
+\textbf{Regime} &
+\textbf{Question} &
+\textbf{Primary evidence} \\
+\midrule
+
+H1 &
+Layer~1 &
+Can learned relays improve upon AF? &
+Canonical BER comparison \\
+
+H2 &
+Layer~1 &
+Can learned relays reliably improve upon matched symbol-wise DF? &
+Canonical BER comparison and analytical DF validation \\
+
+H3 &
+Layer~1 &
+Does increasing neural capacity continue to improve BER? &
+Model-size sweep and repeated training runs \\
+
+H4 &
+Layer~1 &
+How much architecture-dependent behavior remains under comparable parameter
+budgets? &
+Normalized architecture comparison \\
+
+H5 &
+Layers~2--4 &
+How does learned relaying compare as channel memory is introduced and matched
+channel information becomes progressively less available? &
+Known-ISI, finite-pilot, and posterior-free experiments \\
+
+\bottomrule
+\end{tabular}
+\end{table}
+
+
+\section{Decision Criteria}
+\label{sec:hypothesis-decision-criteria}
+
+The hypotheses are evaluated using the metrics appropriate to the question
+being tested. BER versus SNR is the primary performance metric in the
+canonical and unknown-channel comparisons. Model-size and architecture
+hypotheses are interpreted using repeated training runs and the corresponding
+statistical variation where available.
+
+Computational comparisons use the operation-count or measured inference-cost
+definitions specified in the corresponding experiment. Latency comparisons
+distinguish computational cost from buffering and decision delay where block
+or sequence processing is required.
+
+A hypothesis is not interpreted as supported merely because one method
+achieves a numerically lower BER at a single operating point. Conclusions are
+interpreted with respect to the statistical uncertainty, SNR range,
+information assumptions, and evaluation budget of the corresponding
+experiment.
+
+Likewise, a crossover between learned and classical methods is interpreted in
+relation to the information supplied to each method. A comparison between a
+matched detector with exact channel knowledge and a learned detector without
+that information answers a different question from a comparison in which both
+methods must operate from finite observations.
+
+
+\section{Scope of the Hypotheses}
+\label{sec:hypothesis-scope}
+
+The hypotheses are empirical claims about the relay architectures, channel
+models, modulation schemes, training procedures, and classical baselines
+evaluated in this thesis. They are not universal claims about all neural or
+classical communication systems.
+
+In particular, failure of a learned relay to outperform matched DF in the
+canonical benchmark does not imply that learned relaying is generally
+ineffective. Conversely, an advantage under finite channel estimation or
+operation without a supplied matched posterior does not imply that the same
+learned relay should outperform a matched classical detector when the
+information required by that detector is available.
+
+References to the strongest classical baseline therefore mean the strongest
+applicable classical baseline evaluated under the information assumptions of
+the corresponding experiment. Claims of optimality are restricted to the
+specified channel model, available information, and decision criterion.
+
+The canonical benchmark, the principal unknown and mismatched-channel study,
+and the supplementary coded and resource study also serve different purposes.
+The canonical benchmark establishes the matched-model control. Layers~2--4
+form the principal experimental contribution by progressively changing the
+information conditions under which model-based processing operates. The coded
+study is supplementary and tests the robustness of the canonical
+interpretation under coding, throughput, and latency constraints. It does not
+form an additional layer of the channel-information hierarchy.
+
+
+\section{Chapter Synthesis}
+\label{sec:research-objectives-synthesis}
+
+The experimental program begins with the regime most favorable to classical
+model-based processing and then progressively relaxes its preconditions.
+Layer~1 establishes whether learning provides an advantage when the channel is
+matched, memoryless, and known. Layer~2 introduces memory while retaining
+exact channel knowledge. Layer~3 places a finite acquisition cost on that
+knowledge. Layer~4 removes the supplied per-block information required to
+construct the matched posterior.
+
+These layers locate the information boundary of the comparison. Complexity
+and latency analyses separately determine whether a classical rule that
+remains statistically constructible can also be afforded operationally.
+
+The hypotheses therefore do not seek a single winning relay architecture.
+Together, they test the thesis proposition that the relative value of learned
+and classical relaying depends on two conditions: whether the required model
+information can be obtained reliably, and whether the resulting decision rule
+can be executed within the available resource budget.
+
+The chapters that follow evaluate these hypotheses first under the matched
+canonical benchmark and then under progressively less favorable information
+conditions. The resulting evidence is used to identify where classical
+model-based processing remains the preferred reference and where learned
+relaying becomes a useful complement.
