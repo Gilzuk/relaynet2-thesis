@@ -18,6 +18,29 @@ The studies examine two resources separately: \emph{channel-estimate reliability
 
 Latency is singled out for measurement because it is more often assumed than measured. A sequence detector is commonly treated as latency-expensive on the grounds that it searches a trellis, and a windowed relay as cheap on the grounds that its window is short; neither follows from the structure of the algorithms, since a trellis search need not run to the end of the block and a window must be filled on both sides of the symbol it decides. Section~\ref{sec:joint-latency-memory} therefore measures the decision delay each detector actually imposes, rather than inferring it.
 
+\paragraph{How the questions, hypotheses and experiments fit together.} The two research questions are answered by Chapter~\ref{sec:unknown-channels}, which is why that chapter carries the principal contribution. O1 is tested as hypothesis H5, by the studies around it and, for channel information, by the pilot-budget sweep; O2 has no numbered hypothesis and is answered descriptively, by the delay and arithmetic studies. Hypotheses H1--H4 answer neither question directly. They belong to the canonical comparison of Section~\ref{sec:siso-bpsk-performance-baseline-relay-comparison}, a memoryless control on which the classical answer is known in closed form: it calibrates the framework, and it compares the learned architectures on a task where memory and channel information play no role. The coded study tests whether the canonical conclusion survives a channel code. The studies are separate experiments, not successive relaxations of one system: modulation, fading, training and evaluation budgets change between them. Table~\ref{tbl:rq-map} maps each question and hypothesis to the sections that answer it; the outcomes are collected in Chapter~\ref{sec:summary}.
+
+\begin{longtable}[]{@{}>{\raggedright\arraybackslash}p{0.22\linewidth}>{\raggedright\arraybackslash}p{0.44\linewidth}>{\raggedright\arraybackslash}p{0.26\linewidth}@{}}
+\caption[Research questions and the experiments that answer them]{Research questions and hypotheses, and the experiments that answer them. Outcomes are summarized in Chapter~\ref{sec:summary} and Table~\ref{tbl:table33}}\label{tbl:rq-map}\tabularnewline
+\toprule\noalign{}
+Question or hypothesis & Experiment & Sections \\
+\midrule\noalign{}
+\endfirsthead
+\toprule\noalign{}
+Question or hypothesis & Experiment & Sections \\
+\midrule\noalign{}
+\endhead
+\bottomrule\noalign{}
+\endlastfoot
+O1 / H5: memory, no budget & Memoryless control; fixed three-tap ISI with genie MLSE, scalar MAP and BCJR references; QPSK re-check; composite channel; blind regime with MMSE and CMA baselines; sequence models on memory & \ref{sec:layer-one}, \ref{sec:unknown-channel-experiment}, \ref{sec:flat-unknown-channels}--\ref{sec:composite-channel}, \ref{sec:blind-channel}--\ref{sec:sequence-on-memory} \\
+O1: channel information & Pilot-budget sweep against LS-plus-MLSE & \ref{sec:partial-posterior} \\
+O2: delay and arithmetic & Decision delay and multiplications per symbol in one coded chain, across traceback depth and channel length & \ref{sec:complexity-viterbi-mlp}, \ref{sec:joint-latency-memory} \\
+H1, H2 (control) & Canonical eight-relay comparison; conventional AF reference & \ref{sec:siso-bpsk-performance-baseline-relay-comparison}, \ref{sec:low-snr-advantage-of-neural-relays-h1-confirmed} \\
+H3 (control) & Complexity study; replicated size sweep & \ref{sec:parameter-normalization-complexity-trade-off}, \ref{sec:minimum-relay-size} \\
+H4 (control) & Equal-budget comparison at about 3{,}000 parameters & \ref{sec:normalized-parameter-comparison}, \ref{sec:parameter-normalization-complexity-trade-off} \\
+Canonical result under coding & Block DF with a convolutional code against coded-aware learned relays & \ref{sec:coded-block-df} \\
+\end{longtable}
+
 \section{Research Gap and Motivation}\label{sec:research-gap-and-motivation}
 
 Despite growing interest in AI for wireless communication, the literature reviewed for this thesis did not identify a controlled comparison of the particular relay-processing paradigms evaluated here. Because this was not a preregistered systematic review, the gap statements below are scoped to the cited and reviewed literature rather than asserted as exhaustive:
@@ -30,39 +53,24 @@ Despite growing interest in AI for wireless communication, the literature review
 
 This thesis addresses both gaps through a unified framework that implements nine relay strategies and compares eight of them on the canonical setup, with both original and normalized parameter counts, full statistical analysis, and a dedicated complexity study; Gap 1's adversarial paradigm (cGAN) is implemented but, being excluded from the canonical comparison on cost grounds, is addressed qualitatively rather than quantitatively. The following table summarizes the positioning of this work relative to the literature:
 
-\begin{longtable}[]{@{}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}
-  >{\raggedright\arraybackslash}p{(\linewidth - 4\tabcolsep) * \real{0.3333}}@{}}
-\caption[Research positioning]{Research positioning: comparison of this thesis against prior work in deep-learning-based relay communication}\label{tbl:table17}\tabularnewline
+\begin{longtable}[]{@{}>{\raggedright\arraybackslash}p{0.17\linewidth}>{\raggedright\arraybackslash}p{0.19\linewidth}>{\raggedright\arraybackslash}p{0.25\linewidth}>{\raggedright\arraybackslash}p{0.31\linewidth}@{}}
+\caption[Research positioning]{Research positioning: named studies closest to this thesis, the node and task each addresses, what is learned, and what it is compared against (Section~\ref{sec:positioning-closest-work})}\label{tbl:table17}\tabularnewline
 \toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Aspect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Prior Work
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-This Thesis
-\end{minipage} \\
+Study & Node and task & Learned component & Comparators and measures \\
 \midrule\noalign{}
 \endfirsthead
 \toprule\noalign{}
-\begin{minipage}[b]{\linewidth}\raggedright
-Aspect
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-Prior Work
-\end{minipage} & \begin{minipage}[b]{\linewidth}\raggedright
-This Thesis
-\end{minipage} \\
+Study & Node and task & Learned component & Comparators and measures \\
 \midrule\noalign{}
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Relay strategies compared & 1--2 (typically AF vs.~DF, or one AI method) & 8 compared (2 classical + 6 AI); a ninth, cGAN, is implemented but excluded on cost grounds \\
-AI paradigms & Single (e.g., supervised only) & 4 learned paradigms implemented (supervised, generative, adversarial, sequential); 3 of them reach the canonical comparison, adversarial (cGAN) being excluded on cost grounds. The ``four paradigms'' of Objective~1 is a different count of a different set: it spans the eight \emph{compared} strategies and includes no-learning (AF, DF) in place of adversarial \\
-Evaluation discipline & Single ad-hoc configuration & One canonical setup (SISO, Rayleigh, QPSK) for the eight-relay comparison, never varied within that comparison --- which is a statement about the \emph{setup}, not about the analysis, and not a claim of preregistration: which relay pairs and SNR points are reported was decided after inspecting the curves, so those comparisons are exploratory (Section~\ref{sec:statistical-significance-testing}) --- calibrated against closed-form theory on that channel; a supplementary coded study deliberately varies the code, rate, and modulation against this baseline \\
-Complexity analysis & None & Normalized $\sim$3K-parameter comparison + complexity study (does BER rise again with model size?) \\
-State space models & Applied to receiver-side tasks; none as a relay processor & Mamba-S6, Mamba-2 SSD evaluated as relay processors \\
-Statistical reporting & Varies among the cited studies & Paired Wilcoxon tests reported per comparison without multiplicity correction; 95\% intervals and at least 10 trials per point \\
+Gomadam and Jafar~\cite{GomadamJafar2007EF} & Relay; memoryless forwarding & None: an analytic estimate from known statistics & AF and demodulate-and-forward; destination SNR \\
+Farsad and Goldsmith~\cite{FarsadGoldsmith2018NNDetection} & Receiver; sequence detection & Sliding bidirectional RNN detector, no CSI after training & Viterbi with perfect and imperfect CSI; BER on Poisson channels \\
+Shlezinger et al.~\cite{Shlezinger2020ViterbiNet} & Receiver; sequence detection & Likelihoods inside a Viterbi recursion & Viterbi with perfect and uncertain CSI; BER \\
+Akdemir et al.~\cite{Akdemir2024DLRelaySelection} & DF relay system; relay selection & Channel-coefficient forecasts & SNR-based, threshold-based and all-relay participation protocols \\
+Bergel et al.~\cite{Bergel2023RelaysAsNeurons} & AF relay network; gain setting & Relay gains, with relays treated as neurons & Analog gain optimization exploiting hardware nonlinearity; no symbol-level detection \\
+This thesis & Two-hop relay; symbol-level forwarding & Eight compared relay maps, six learned, under declared parameter budgets & AF, symbol-wise DF, genie and pilot-aided MLSE, BCJR, scalar MAP, block DF; destination BER, decision delay and multiplications per symbol \\
 \end{longtable}
 
 \paragraph{Relationship between the canonical study and the extension study.} Hypotheses H1--H4 concern the canonical relay scenario introduced in Chapter~\ref{sec:introduction}: a memoryless two-hop channel with white noise and uncoded transmission. Hypothesis H5 studies a deliberately different regime in which the canonical model no longer represents the true channel. It is therefore a robustness extension rather than a direct continuation of the canonical experiments.
