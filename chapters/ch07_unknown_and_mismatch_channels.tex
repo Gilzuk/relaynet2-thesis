@@ -79,7 +79,7 @@ The flat-channel controls, pilot-budget sweep, and blind comparison delimit that
     \begin{itemize}
         \item AF
         \item Symbol-wise DF
-        \item MLP (window 11, one hidden layer of 13 tanh units, 170 parameters; trained at SNR $\in\{5,10,15\}$ dB with MSE loss, as in the canonical study, but not with its full protocol: tanh rather than ReLU hidden units, Adam at learning rate $3\times10^{-3}$ for 25 epochs on 120{,}000 samples, against the canonical MLP's SGD at $0.01$ for 100 epochs on 25{,}000)
+        \item MLP (window 11, one hidden layer of 13 tanh units, 170 parameters; trained at SNR $\in\{5,10,15\}$ dB with MSE loss, as in the canonical study, but not with its full protocol: tanh rather than ReLU hidden units, Adam at learning rate $3\times10^{-3}$ for 25 epochs on 120{,}000 samples, against the canonical MLP's Adam at $0.01$ for 100 epochs on 25{,}000)
         \item For ISI setups only: Viterbi MLSE applied to the 3-tap FIR/ISI channel, evaluated with either genie CSI or a 3-tap least-squares channel estimate obtained from 200 pilot symbols
     \end{itemize}
 \item \textbf{Evaluation:} 10 trials $\times$ 100{,}000 bits per SNR point, SNR range 0--20 dB. To rule out the influence of the particular random initialization and training data used to fit the MLP, the network is retrained independently with three different random seeds, giving 30 BER samples per cell (3 training instances $\times$ 10 inference trials). The mean is their average. The confidence interval is \emph{not}: the ten trials inside one seed share a trained network, so they resample Monte Carlo noise but not training variance and are not 30 independent draws from the population the claim concerns. Intervals are therefore computed hierarchically --- average within each seed, then a Student-$t$ interval on the three seed means, $t_{2,0.975} = 4.303$ rather than $1.96$, deliberately wide because three points say little about a spread. Pooling all 30 as i.i.d.\ divides by $\sqrt{30}$ where the effective sample size is nearer 3; on the MLP rows here that understates the interval by a factor of about seven to eight (at 8~dB on S1, ${\pm}1.3\times10^{-3}$ against a pooled ${\pm}1.8\times10^{-4}$). AF and DF are barely affected, as expected, since neither has a trained network to vary across seeds.
@@ -119,10 +119,10 @@ Before attributing any classical failure to ``unknownness,'' it must be separate
 
 These flat-channel controls preserve sample-wise channel mappings, although the differential receiver uses adjacent samples. They test three specified forms of parameter uncertainty; they do not cover all unknown memoryless channels.
 
-\textbf{Conclusion.} In these three controls, the MLP and classical relay have similar measured BER: the largest difference is $0.0012$ across the tabulated points and $0.0064$ across the full sweep. Differential detection accommodates the block phase, and a positive gain preserves the noiseless BPSK sign. These observations show that the tested uncertainty alone need not defeat the chosen classical receiver; they do not prove equivalence or exclude benefits on other flat-channel families.
+\textbf{Conclusion.} In these three controls, the MLP and classical relay have similar measured BER from 8~dB upward: the largest difference is $0.0013$ across the tabulated points. Below 8~dB the unknown-phase MLP trails differential detection, by up to $0.0106$ at 0~dB, which lies below its lowest training SNR; in the gain and asymmetry cases the MLP is level with DF or slightly ahead throughout. Differential detection accommodates the block phase, and a positive gain preserves the noiseless BPSK sign. These observations show that the tested uncertainty alone need not defeat the chosen classical receiver; they do not prove equivalence or exclude benefits on other flat-channel families.
 
 \begin{longtable}[]{@{}lllll@{}}
-\caption[Flat unknown channels]{Flat-channel controls at 8/12/16/20~dB. Learned-relay means use three training seeds and ten inference trials per seed. Similar measured BER is not a statistical equivalence claim. MLP-169 uses complex I/Q input; MLP-170 uses real input}\label{tbl:tableE6flat}\tabularnewline
+\caption[Flat unknown channels]{Flat-channel controls at 8/12/16/20~dB. Learned-relay means use three training seeds and ten inference trials per seed. Similar measured BER is not a statistical equivalence claim. MLP-169 uses complex I/Q input; MLP-170 uses real input. Hop-2 noise follows the common convention (Appendix~\ref{sec:appendix-g-channel-specs})}\label{tbl:tableE6flat}\tabularnewline
 \toprule\noalign{}
 Flat channel & Relay & 8 dB & 12 dB & 16/20 dB \\
 \midrule\noalign{}
@@ -133,12 +133,12 @@ Flat channel & Relay & 8 dB & 12 dB & 16/20 dB \\
 \endhead
 \bottomrule\noalign{}
 \endlastfoot
-Unknown phase (DBPSK) & DF (diff.) & 0.0654 & 0.0286 & 0.0121 / 0.0050 \\
- & MLP-169 & 0.0666 & 0.0286 & 0.0121 / 0.0050 \\
-Unknown gain & DF & 0.0739 & 0.0298 & 0.0122 / 0.0050 \\
- & MLP-170 & 0.0739 & 0.0300 & 0.0122 / 0.0050 \\
-Branch asymmetry & DF & 0.0669 & 0.0286 & 0.0121 / 0.0050 \\
- & MLP-170 & 0.0671 & 0.0287 & 0.0121 / 0.0050 \\
+Unknown phase (DBPSK) & DF (diff.) & 0.0363 & 0.0148 & 0.0061 / 0.0025 \\
+ & MLP-169 & 0.0376 & 0.0148 & 0.0061 / 0.0025 \\
+Unknown gain & DF & 0.0453 & 0.0160 & 0.0061 / 0.0025 \\
+ & MLP-170 & 0.0456 & 0.0162 & 0.0061 / 0.0025 \\
+Branch asymmetry & DF & 0.0379 & 0.0149 & 0.0061 / 0.0025 \\
+ & MLP-170 & 0.0381 & 0.0149 & 0.0061 / 0.0025 \\
 \end{longtable}
 
 \textbf{Conclusion (H5, within the tested scope).} The fixed-filter BPSK study shows a large MLP improvement over AF and zero-threshold DF. Matched Viterbi gives lower measured BER over the resolved comparison range: at 8~dB the genie and 200-pilot LS values are $0.001354$ and $0.001460$, respectively, versus $0.0065$ for the MLP. There is no 8-dB crossover in the corrected data. At 0~dB the MLP and genie means are close and the study does not resolve their ordering. Interpolated required-SNR penalties relative to genie MLSE vary with the target: $0.26$, $1.18$, $1.88$, and $2.53$~dB at BER $10^{-1}$ through $10^{-4}$. They are not a universal $1$--$1.5$~dB offset. The fixed-budget checkpoint results support the separation through 16~dB, not an extrapolation beyond that range.
